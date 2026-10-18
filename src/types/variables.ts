@@ -328,8 +328,8 @@ export const menuItems: (MenuItem|MenuItemGroup)[] = [
     },
     {
         id: 7,
-        label: "Rooms",
-        icon: "pi pi-building",
+        label: "RUANGAN",
+        icon: "pi pi-map-marker",
         privillage: AccountAPIPrivillage.UpdatePIC,
         description: "Lihat ruangan dan ubah PIC yang bertanggung jawab"
     },
