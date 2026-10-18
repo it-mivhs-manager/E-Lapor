@@ -324,6 +324,13 @@ export const menuItems: (MenuItem|MenuItemGroup)[] = [
         privillage: AccountAPIPrivillage.UsersPage,
         description: "Lihat data pengguna yang menggunakan website ini"
     },
+    {
+        id: 7,
+        label: "Rooms",
+        icon: "pi pi-building",
+        privillage: AccountAPIPrivillage.UpdatePIC,
+        description: "Lihat ruangan dan ubah PIC yang bertanggung jawab"
+    },
     { 
         id: 5,
         label: "Setting",
