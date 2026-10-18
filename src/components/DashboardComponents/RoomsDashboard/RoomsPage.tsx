@@ -27,7 +27,6 @@ export default function RoomsPage() {
   const [addingLoading, setAddingLoading] = useState(false);
 
   const [deletedRoom, setDeletedRoom] = useState<Report_Location | null>(null);
-  const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deletingLoading, setDeletingLoading] = useState(false);
 
   const showedRooms = useMemo(() => {
@@ -47,12 +46,11 @@ export default function RoomsPage() {
 
   const openDelete = (room: Report_Location) => {
     setDeletedRoom(room);
-    setDeleteConfirmText("");
   };
 
   const handleDelete = async () => {
     // Typed confirmation guards an irreversible delete of the room and all its reports.
-    if (!deletedRoom || deleteConfirmText !== deletedRoom.location) return;
+    if (!deletedRoom) return;
 
     setDeletingLoading(true);
     const result = await deleteRoom(deletedRoom.id);
@@ -345,23 +343,13 @@ export default function RoomsPage() {
             <p>
               Semua laporan di ruangan ini ({reportData?.filter((report) => report.location_name === deletedRoom?.location).length ?? 0} laporan) beserta fotonya akan ikut terhapus permanen. Tindakan ini tidak bisa dibatalkan.
             </p>
-            <div className="flex flex-col gap-2">
-              <label htmlFor="delete_confirm">Ketik <b>{deletedRoom?.location}</b> untuk konfirmasi</label>
-              <input
-                id="delete_confirm"
-                type="text"
-                value={deleteConfirmText}
-                onChange={(e) => setDeleteConfirmText(e.target.value)}
-                className="w-full px-4 py-2 rounded-xl border border-gray-300 text-white!"
-              />
-            </div>
             <div className="flex flex-row gap-4 justify-end">
               <button onClick={() => setDeletedRoom(null)} className="cursor-pointer px-4 py-2 border border-gray-300 rounded-lg">
                 Batal
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deletingLoading || deleteConfirmText !== deletedRoom?.location}
+                disabled={deletingLoading}
                 className="flex flex-row items-center cursor-pointer px-4 py-2 bg-red-600 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Hapus
