@@ -204,6 +204,9 @@ export enum AccountAPIPrivillage {
     MarkCompeleteReport = "MarkCompeleteReport",
     DeleteReport = "DeleteReport",
     GetReport = "GetReport",
+
+    // PIC Related Privillage
+    UpdatePIC = "UpdatePIC",
     
     // Umm Related Privillage
     ReportStatisticsPage = "ReportStatisticsPage",
