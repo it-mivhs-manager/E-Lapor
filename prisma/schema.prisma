@@ -18,6 +18,8 @@ enum ActivityType {
   UpdateReport
   DeleteReport
   CreatePIC
+  UpdatePIC
+  DeletePIC
 }
 
 enum AccountType {

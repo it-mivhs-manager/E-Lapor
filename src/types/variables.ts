@@ -204,6 +204,11 @@ export enum AccountAPIPrivillage {
     MarkCompeleteReport = "MarkCompeleteReport",
     DeleteReport = "DeleteReport",
     GetReport = "GetReport",
+
+    // PIC Related Privillage
+    CreatePIC = "CreatePIC",
+    UpdatePIC = "UpdatePIC",
+    DeletePIC = "DeletePIC",
     
     // Umm Related Privillage
     ReportStatisticsPage = "ReportStatisticsPage",
@@ -320,6 +325,13 @@ export const menuItems: (MenuItem|MenuItemGroup)[] = [
         icon: "pi pi-user",
         privillage: AccountAPIPrivillage.UsersPage,
         description: "Lihat data pengguna yang menggunakan website ini"
+    },
+    {
+        id: 7,
+        label: "RUANGAN",
+        icon: "pi pi-map-marker",
+        privillage: AccountAPIPrivillage.UpdatePIC,
+        description: "Lihat ruangan dan ubah PIC yang bertanggung jawab"
     },
     { 
         id: 5,

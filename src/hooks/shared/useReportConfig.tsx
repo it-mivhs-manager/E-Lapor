@@ -1,31 +1,45 @@
 import { useEffect } from "react";
 import { create } from "zustand";
 import { APIResultType, getFormConfiguration, type FormConfigurationResponse } from "../../utils/api_interface";
+import type { Report_Location } from "../../types/variables";
 import { useCampusDataHook } from "../pages/ReportForm/useCampusData";
 import { useMessageToastHook } from "./useMessageToast";
 import { useNetworkConnectivityHook } from "./useNetworkConnectivity";
 
 type useReportConfigType = {
-  picNamesOptions: string[];
-  setPicNamesOptions: (newPicNamesOptions: string[]) => void;
+  locationData: Report_Location[];
+  setLocationData: (newLocationData: Report_Location[]) => void;
 
+  picNamesOptions: string[];
   locationOptions: { [key: string]: string[] }
-  setLocationOptions: (newLocationOptions: { [key: string]: string[] }) => void;
 };
+
+function derive_location_data(locationData: Report_Location[]) {
+  const locationOptions: { [key: string]: string[] } = {};
+  locationData.forEach((value) => {
+    locationOptions[value.campus_name] ??= [];
+    locationOptions[value.campus_name].push(value.location);
+  });
+
+  return {
+    locationData,
+    picNamesOptions: [...new Set(locationData.map((value) => value.pic_name))],
+    locationOptions
+  };
+}
 
 export const useReportConfigHook = create<useReportConfigType>((set) => {
   return {
+    locationData: [],
+    setLocationData(newLocationData) {
+      set(() => derive_location_data(newLocationData));
+    },
+
     // PIC names options
     picNamesOptions: [],
-    setPicNamesOptions(newPicNamesOptions) {
-      set(() => ({ picNamesOptions: newPicNamesOptions }));
-    },
 
     // Location options
     locationOptions: {},
-    setLocationOptions(newLocationOptions) {
-      set(() => ({ locationOptions: newLocationOptions }));
-    },
   };
 });
 
@@ -34,7 +48,7 @@ let initialized = false;
 
 export default function UseReportConfigHookEffect(props: { useAllCampus?: boolean }) {
   const { selectedCampus } = useCampusDataHook();
-  const { setLocationOptions, setPicNamesOptions } = useReportConfigHook();
+  const { setLocationData } = useReportConfigHook();
   const { showMessage } = useMessageToastHook();
   const { isConnected } = useNetworkConnectivityHook();
 
@@ -52,23 +66,7 @@ export default function UseReportConfigHookEffect(props: { useAllCampus?: boolea
     // Get Form Configuration
     getFormConfiguration().then((result) => {
       if ((result as FormConfigurationResponse).location_data !== undefined) {
-        result = result as FormConfigurationResponse;
-        let resultPicNamesOptions: { [key: string]: string[] } = {};
-        let resultLocationOptions: { [key: string]: string[] } = {};
-
-        result.location_data.forEach((value) => {
-          if(value.campus_name in resultLocationOptions) {
-            resultLocationOptions[value.campus_name].push(value.location);
-          }
-          else {
-            resultLocationOptions[value.campus_name] = [value.location];
-          }
-          
-          resultPicNamesOptions[value.pic_name] = []
-        });
-
-        setPicNamesOptions(Object.keys(resultPicNamesOptions));
-        setLocationOptions(resultLocationOptions);
+        setLocationData((result as FormConfigurationResponse).location_data);
       } else if (result === APIResultType.DatabaseError) {
         showMessage("There's an error in database.", "error", "Please reload the website after a while.");
       } else if (result === false) {

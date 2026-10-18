@@ -1,85 +1,71 @@
 import type { APIContext } from "astro";
-import { create_response_status, record_activity, verify_user_data_token } from "../../../../utils/api_helper";
+import { apiresult_to_status, create_response_json, create_response_status, del_cache, record_activity, verify_user_data_token } from "../../../../utils/api_helper";
 import { prisma } from "../../../../utils/db";
-import { campuscode_to_campus } from "../../../../types/variables";
 import { ActivityType, Prisma } from "@prisma/client";
-import { APIResultType } from "../../../../utils/api_interface";
+import { account_to_api_privillage, AccountAPIPrivillage, Campus } from "../../../../types/variables";
+import { z } from "zod";
 
-type AddPICRequestBodyType = {
-  name?: string,
-  campus_code?: string
-}
+// A new room (location) with its PIC. `location` is globally unique.
+const AddRoomBodyType = z.object({
+  location: z.string().trim().min(1).max(191),
+  campus_name: z.nativeEnum(Campus),
+  pic_name: z.string().trim().min(1).max(191)
+});
 
 export async function POST({ request, cookies, clientAddress }: APIContext) {
-  // Verify the request coming from an admin
-  const user_cookies = cookies.get("user_token")?.value;
-  
-  const [verification_result, verification_output, user_data] = await verify_user_data_token(user_cookies ?? "");
-  if(!verification_result) {
-    if(verification_output === APIResultType.DatabaseError) {
-      return create_response_status(503);
-    }
-    else if(verification_output === APIResultType.InternalServerError) {
-      return create_response_status(500);
-    }
-    
+  //? Verify user token
+  const user_token = cookies.get("user_token")?.value;
+  const [verification_result, verification_output, user_data] = await verify_user_data_token(user_token ?? "");
+  if (!verification_result) {
+    return apiresult_to_status(verification_output);
+  }
+
+  //? Verify user role
+  if (!account_to_api_privillage[user_data.role].includes(AccountAPIPrivillage.CreatePIC)) {
     return create_response_status(401);
   }
-  
-  // Get the request body
-  const body: AddPICRequestBodyType = await request.json();
 
-
-  // Verify request body
-  if(!body.name) {
-    console.log("Body is not valid!");
+  //? Verify request body
+  const parsed_body = AddRoomBodyType.safeParse(await request.json().catch(() => null));
+  if (!parsed_body.success) {
     return create_response_status(400);
   }
 
-  const verified_campus_name = campuscode_to_campus(body.campus_code);
-  if(!verified_campus_name) {
-    return create_response_status(400);
-  }
-
-  // Add data to Report_PIC table
+  //? Record Activity (before mutating data, so a failure here never leaves a half-reported success)
   try {
-    await prisma.report_PIC.create({
-      data: {
-        name: body.name,
-        campus_name: verified_campus_name
-      }
+    await record_activity({
+      ip_address: clientAddress,
+      url: request.url,
+      activity_type: ActivityType.CreatePIC,
+      user_id: user_data.id
     });
   }
-  catch(err) {
-      if(err instanceof Prisma.PrismaClientInitializationError) {
-          return create_response_status(503);
-      }
-      console.error(`There's an error when trying to create report_PIC data : ${err}`);
-      return create_response_status(500);
+  catch (err) {
+    if (err instanceof Prisma.PrismaClientInitializationError) {
+      return create_response_status(503);
+    }
+    console.error(`There's an error when trying to add activity record data. Error: ${err}`);
+    return create_response_status(500);
   }
-  
-      
-  // Record Activity
-  try {
-      await record_activity({
-          ip_address: clientAddress,
-          url: request.url,
-          activity_type: ActivityType.CreatePIC,
-          user_id: user_data.id
-      });
-  }
-  catch(err) {
-      if (err instanceof Prisma.PrismaClientValidationError) {
-          return create_response_status(400);
-      }
-      else if(err instanceof Prisma.PrismaClientInitializationError) {
-          return create_response_status(503);
-      }
-      
-      console.error(`There's an error when trying to add activity record data. Error: ${err}`);
-      return create_response_status(500);
-  }
-  
 
-  return create_response_status(200);
+  //? Create the room
+  let created_location;
+  try {
+    created_location = await prisma.report_Location.create({ data: parsed_body.data });
+  }
+  catch (err) {
+    if (err instanceof Prisma.PrismaClientInitializationError) {
+      return create_response_status(503);
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return create_response_status(409); // Room name already exists
+    }
+    console.error(`There's an error when trying to create room data: ${err}`);
+    return create_response_status(500);
+  }
+
+  //? Invalidate cached room list
+  await del_cache("cached-location-data");
+
+  return create_response_json(created_location);
 }

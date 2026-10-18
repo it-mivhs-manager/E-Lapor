@@ -321,7 +321,7 @@ export async function markCompleteReport(report_id: string, confirmation_photo: 
     }
 }
 
-type FormConfigurationResponse = {
+export type FormConfigurationResponse = {
     location_data: Report_Location[]
 }
 
@@ -345,6 +345,78 @@ export async function getFormConfiguration(): Promise<APIResultType | FormConfig
     }
 
     return api_result;
+}
+
+export async function updateRoomPIC(location: string, pic_name: string): Promise<APIResultType | Report_Location | false> {
+    try {
+        const response = await fetch(base_url_endpoint + "/api/report_form/pic_data/update", {
+            method: "PUT",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ location, pic_name })
+        });
+
+        if (response.ok) {
+            return (await response.json()) as Report_Location;
+        }
+
+        // status_to_apiresult maps 400/404 to NoError, so treat those as a generic failure.
+        const api_result = status_to_apiresult(response.status);
+        return api_result === APIResultType.NoError ? false : api_result;
+    }
+    catch (err) {
+        return false;
+    }
+}
+
+export async function addRoom(location: string, campus_name: Campus, pic_name: string): Promise<APIResultType | Report_Location | false> {
+    try {
+        const response = await fetch(base_url_endpoint + "/api/report_form/pic_data/add", {
+            method: "POST",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ location, campus_name, pic_name })
+        });
+
+        if (response.ok) {
+            return (await response.json()) as Report_Location;
+        }
+
+        // status_to_apiresult maps 400 to NoError, so treat it as a generic failure.
+        const api_result = status_to_apiresult(response.status);
+        return api_result === APIResultType.NoError ? false : api_result;
+    }
+    catch (err) {
+        return false;
+    }
+}
+
+export async function deleteRoom(id: string): Promise<APIResultType | { id: string, location: string, deleted_reports: number } | false> {
+    try {
+        const response = await fetch(base_url_endpoint + "/api/report_form/pic_data/delete", {
+            method: "DELETE",
+            credentials: "include",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ id })
+        });
+
+        if (response.ok) {
+            return await response.json();
+        }
+
+        // status_to_apiresult maps 400/404 to NoError, so treat those as a generic failure.
+        const api_result = status_to_apiresult(response.status);
+        return api_result === APIResultType.NoError ? false : api_result;
+    }
+    catch (err) {
+        return false;
+    }
 }
 
 export async function deleteUser(id: string): Promise<APIResultType> {
